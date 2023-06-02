@@ -1,120 +1,132 @@
-// npx json-server -p 3500 -w data/db.json
-
 import Header from "./Header";
-import SearchItem from "./SearchItem";
-import AddItem from "./AddItem";
-import Content from "./Content";
+import Nav from "./Nav";
 import Footer from "./Footer";
+import Home from "./Home";
+import NewPost from "./NewPost";
+import PostPage from "./PostPage";
+import EditPost from "./EditPost";
+import About from "./About";
+import Missing from "./Missing";
+import { Route, Switch, useHistory } from "react-router-dom";
 import { useState, useEffect } from "react";
-import apiRequest from "./apiRequest";
+import { format } from "date-fns";
+import api from "./api/posts";
+import useWindowSize from "./hooks/useWindowSize";
+import useAxiosFetch from "./hooks/useAxiosFetch";
 
-const App = () => {
-  const API_URL = "http://localhost:3500/items";
-
-  const [items, setItems] = useState([]);
-  const [newItem, setNewItem] = useState("");
+function App() {
+  const [posts, setPosts] = useState([]);
   const [search, setSearch] = useState("");
-  const [fetchError, setFetchError] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [searchResults, setSearchResults] = useState([]);
+  const [postTitle, setPostTitle] = useState("");
+  const [postBody, setPostBody] = useState("");
+  const [editTitle, setEditTitle] = useState("");
+  const [editBody, setEditBody] = useState("");
+  const history = useHistory();
+  const { width } = useWindowSize();
 
-  // this useEffect only happens at load time (just at the beginning)
+  const { data, fetchError, isLoading } = useAxiosFetch(
+    "http://localhost:3500/posts"
+  );
+
   useEffect(() => {
-    const fetchItems = async () => {
-      try {
-        const response = await fetch(API_URL);
-        if (!response.ok) throw Error("Did not receive expected data");
-        const listItems = await response.json();
-        setItems(listItems);
-        setFetchError(null);
-      } catch (err) {
-        setFetchError(err.message);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    setTimeout(() => {
-      fetchItems();
-    }, 2000);
-  }, []);
+    setPosts(data);
+  }, [data]);
 
-  const addItem = async (item) => {
-    const id = items.length ? items[items.length - 1].id + 1 : 1;
-    const myNewItem = { id, checked: false, item };
-    const listItems = [...items, myNewItem];
-    setItems(listItems);
+  useEffect(() => {
+    const filteredResults = posts.filter(
+      (post) =>
+        post.body.toLowerCase().includes(search.toLowerCase()) ||
+        post.title.toLowerCase().includes(search.toLowerCase())
+    );
 
-    const postOptions = {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(myNewItem),
-    };
-    const result = await apiRequest(API_URL, postOptions);
-    if (result) setFetchError(result);
+    setSearchResults(filteredResults.reverse());
+  }, [posts, search]);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    const id = posts.length ? posts[posts.length - 1].id + 1 : 1;
+    const datetime = format(new Date(), "MMMM dd, yyyy pp");
+    const newPost = { id, title: postTitle, datetime, body: postBody };
+    try {
+      const response = await api.post("/posts", newPost);
+      const allPosts = [...posts, response.data];
+      setPosts(allPosts);
+      setPostTitle("");
+      setPostBody("");
+      history.push("/");
+    } catch (err) {
+      console.log(`Error: ${err.message}`);
+    }
   };
 
-  const handleCheck = async (id) => {
-    const listItems = items.map((item) =>
-      item.id === id ? { ...item, checked: !item.checked } : item
-    );
-    setItems(listItems);
-
-    const myItem = listItems.filter((item) => item.id === id);
-    const updateOptions = {
-      method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ checked: myItem[0].checked }),
-    };
-    const reqUrl = `${API_URL}/${id}`;
-    const result = await apiRequest(reqUrl, updateOptions);
-    if (result) setFetchError(result);
+  const handleEdit = async (id) => {
+    const datetime = format(new Date(), "MMMM dd, yyyy pp");
+    const updatedPost = { id, title: editTitle, datetime, body: editBody };
+    try {
+      const response = await api.put(`/posts/${id}`, updatedPost);
+      setPosts(
+        posts.map((post) => (post.id === id ? { ...response.data } : post))
+      );
+      setEditTitle("");
+      setEditBody("");
+      history.push("/");
+    } catch (err) {
+      console.log(`Error: ${err.message}`);
+    }
   };
 
   const handleDelete = async (id) => {
-    const listItems = items.filter((item) => item.id !== id);
-    setItems(listItems);
-
-    const deleteOptions = { method: "DELETE" };
-    const reqUrl = `${API_URL}/${id}`;
-    const result = await apiRequest(reqUrl, deleteOptions);
-    if (result) setFetchError(result);
-  };
-
-  const handleSumbit = (e) => {
-    e.preventDefault();
-    if (!newItem) return;
-    addItem(newItem);
-    setNewItem("");
+    try {
+      await api.delete(`/posts/${id}`);
+      const postsList = posts.filter((post) => post.id !== id);
+      setPosts(postsList);
+      history.push("/");
+    } catch (err) {
+      console.log(`Error: ${err.message}`);
+    }
   };
 
   return (
     <div className="App">
-      <Header title="Grocery list" />
-      <AddItem
-        newItem={newItem}
-        setNewItem={setNewItem}
-        handleSumbit={handleSumbit}
-      />
-      <SearchItem search={search} setSearch={setSearch} />
-      <main>
-        {isLoading && <p>Loading items...</p>}
-        {fetchError && <p style={{ color: "red" }}>{`Error: ${fetchError}`}</p>}
-        {!fetchError && !isLoading && (
-          <Content
-            items={items.filter((item) =>
-              item.item.toLowerCase().includes(search.toLowerCase())
-            )}
-            handleCheck={handleCheck}
-            handleDelete={handleDelete}
+      <Header title="React JS Blog" width={width} />
+      <Nav search={search} setSearch={setSearch} />
+      <Switch>
+        <Route exact path="/">
+          <Home
+            posts={searchResults}
+            fetchError={fetchError}
+            isLoading={isLoading}
           />
-        )}
-      </main>
-      <Footer length={items.length} />
+        </Route>
+        <Route exact path="/post">
+          <NewPost
+            handleSubmit={handleSubmit}
+            postTitle={postTitle}
+            setPostTitle={setPostTitle}
+            postBody={postBody}
+            setPostBody={setPostBody}
+          />
+        </Route>
+        <Route path="/edit/:id">
+          <EditPost
+            posts={posts}
+            handleEdit={handleEdit}
+            editTitle={editTitle}
+            setEditTitle={setEditTitle}
+            editBody={editBody}
+            setEditBody={setEditBody}
+          />
+        </Route>
+        <Route path="/post/:id">
+          <PostPage posts={posts} handleDelete={handleDelete} />
+        </Route>
+        <Route path="/about" component={About} />
+        <Route path="*" component={Missing} />
+      </Switch>
+      <Footer />
     </div>
   );
-};
+}
 
 export default App;

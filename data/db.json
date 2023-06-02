@@ -1,19 +1,28 @@
 {
-  "items": [
+  "posts": [
     {
       "id": 1,
-      "checked": false,
-      "item": "Almonds, Unsalted, in the bag"
+      "title": "My First Post",
+      "datetime": "July 01, 2021 11:17:36 AM",
+      "body": "Lorem, ipsum dolor sit amet consectetur adipisicing elit. Delectus, quam ratione!"
     },
     {
-      "id": 5,
-      "checked": false,
-      "item": "Candy"
+      "id": 2,
+      "title": "My 2nd Post",
+      "datetime": "July 01, 2021 11:17:36 AM",
+      "body": "Lorem, ipsum dolor sit amet consectetur adipisicing elit. Delectus, quam ratione!"
     },
     {
-      "id": 6,
-      "checked": false,
-      "item": "cocomelon"
+      "id": 3,
+      "title": "My 3rd Post",
+      "datetime": "July 01, 2021 11:17:36 AM",
+      "body": "Lorem, ipsum dolor sit amet consectetur adipisicing elit. Delectus, quam ratione!"
+    },
+    {
+      "id": 4,
+      "title": "My 4th Post",
+      "datetime": "July 01, 2021 11:17:36 AM",
+      "body": "Lorem, ipsum dolor sit amet consectetur adipisicing elit. Delectus, quam ratione!"
     }
   ]
 }
